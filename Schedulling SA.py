@@ -10,16 +10,20 @@ import time
 
 # ==== Hàm thuật toán giữ nguyên ====
 def calculate_makespan(jobs, schedule, num_machines):
-   job_task_idx = [0] * len(jobs)
-   machine_end = [0] * num_machines
-   job_end = [0] * len(jobs)
-   gantt_data = []
+   job_task_idx = [0] * len(jobs) # Theo dõi bước hiện tại của mỗi job
+   machine_end = [0] * num_machines # Thời điểm kết thúc của mỗi máy
+   job_end = [0] * len(jobs) # Thời điểm kết thúc của mỗi job
+   gantt_data = [] # Dữ liệu để vẽ biểu đồ Gantt
+   
    for idx, job_id in enumerate(schedule):
        if job_task_idx[job_id] >= len(jobs[job_id]):
-           continue
-       machine, time = jobs[job_id][job_task_idx[job_id]]
-       start = max(machine_end[machine], job_end[job_id])
-       end = start + time
+           continue # Đã hoàn thành tất cả các bước của job này
+          
+       machine, time = jobs[job_id][job_task_idx[job_id]] # Lấy thông tin máy và thời gian
+       start = max(machine_end[machine], job_end[job_id]) # Thời điểm bắt đầu
+      
+       end = start + time # Tính thời điểm kết thúc
+      # Cập nhật trạng thái
        machine_end[machine] = end
        job_end[job_id] = end
        gantt_data.append((machine, job_id, start, end, job_task_idx[job_id]))
@@ -30,37 +34,46 @@ def calculate_makespan(jobs, schedule, num_machines):
 
 
 def generate_neighbor(schedule):
+   # Tạo lịch trình lân cận bằng cách hoán đổi ngẫu nhiên 2 job trong lịch trình
    if len(schedule) < 2:
        return schedule
-   a, b = random.sample(range(len(schedule)), 2)
-   new_schedule = schedule[:]
-   new_schedule[a], new_schedule[b] = new_schedule[b], new_schedule[a]
+   a, b = random.sample(range(len(schedule)), 2) # Chọn 2 vị trí ngẫu nhiên
+   new_schedule = schedule[:] # Tạo bản sao new_schedule
+   new_schedule[a], new_schedule[b] = new_schedule[b], new_schedule[a] # Hoán đổi
    return new_schedule
 
 
 
 
 def simulated_annealing(jobs, num_machines):
+    # Khởi tạo lịch trình ngẫu nhiên
    schedule = []
    for job_id, job in enumerate(jobs):
-       schedule += [job_id] * len(job)
+       schedule += [job_id] * len(job) # Mỗi job xuất hiện số lần bằng số bước của nó
    random.shuffle(schedule)
+   
    best_schedule = schedule[:]
    best_makespan, _ = calculate_makespan(jobs, best_schedule, num_machines)
+
+   # Các tham số nhiệt độ ban đầu, tối thiểu, hệ số giảm nhiệt
    T = 100.0
    Tmin = 1e-3
    alpha = 0.97
+   
    while T > Tmin:
-       neighbor = generate_neighbor(schedule)
+       neighbor = generate_neighbor(schedule) # Tạo lân cận
        makespan_neighbor, _ = calculate_makespan(jobs, neighbor, num_machines)
+      # Cập nhật lịch trình tốt nhất
        if makespan_neighbor < best_makespan:
            best_schedule = neighbor[:]
            best_makespan = makespan_neighbor
+          
        current_makespan, _ = calculate_makespan(jobs, schedule, num_machines)
+      # Quyết định chuyển sang trạng thái lân cận
        if (makespan_neighbor < current_makespan) or (
                random.random() < math.exp(-(makespan_neighbor - current_makespan) / T)):
            schedule = neighbor[:]
-       T *= alpha
+       T *= alpha # Giảm nhiệt độ
    return best_schedule, best_makespan
 
 
@@ -76,7 +89,7 @@ def greedy_schedule(jobs, num_machines):
    schedule = []
    for step in range(max_steps):
        for job_id, job in enumerate(jobs):
-           if step < len(job):
+           if step < len(job): # Nếu job này còn bước ở vị trí step
                schedule.append(job_id)
    makespan, _ = calculate_makespan(jobs, schedule, num_machines)
    return schedule, makespan
@@ -95,7 +108,7 @@ num_machines = 0
 
 
 
-def setup_job_input():
+def setup_job_input(): # Giao diện nhập job
    global jobs, num_machines
    try:
        n_job = int(num_job_entry.get())
@@ -145,7 +158,7 @@ def setup_job_input():
 
 
 
-
+# Hiển thị ô nhập từng bước của job
 def show_job_steps(job_idx, n_steps):
    # Xóa các widget nhập bước cũ
    parent = frame_input_jobs.winfo_children()[job_idx]
@@ -167,7 +180,7 @@ def show_job_steps(job_idx, n_steps):
 
 
 
-
+# Lưu dữ liệu job đã nhập
 def save_jobs():
    global jobs
    jobs.clear()
@@ -189,7 +202,7 @@ def save_jobs():
 
 
 
-
+# Chạy thuật toán & hiển thị kết quả
 def run_optimization():
    if not jobs or num_machines == 0:
        messagebox.showerror("Lỗi", "Bạn chưa nhập hoặc lưu dữ liệu job/máy.")
@@ -232,7 +245,7 @@ def run_optimization():
 
 
 
-
+# Cập nhật bảng kết quả 
 def update_table(gantt_data):
    for row in table.get_children():
        table.delete(row)
@@ -241,7 +254,7 @@ def update_table(gantt_data):
 
 
 
-
+# Vẽ biểu đồ Gantt
 def draw_gantt(gantt_data):
    ax.clear()
    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:cyan']
